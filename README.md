@@ -5,3 +5,6 @@ For debouncing ideas, thanks to:
 https://blog.adafruit.com/2009/10/20/example-code-for-multi-button-checker-with-debouncing/
 http://www.ganssle.com/debouncing.pdf
 http://www.kennethkuhn.com/electronics/debounce.c (this algorithm worked best)
+
+The project name comes from the (frustrated) doctor that currently has to trudge
+through tropical storms at night to turn off the generator.
