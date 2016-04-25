@@ -8,35 +8,42 @@
   http://www.kennethkuhn.com/electronics/debounce.c (this algorithm worked best)
 */
 
-byte buttons[] = {8, 9, 12}; // Pins the buttons are wired to
-byte leds[] = {2, 5, 6, 7}; // Pins the LEDs are wired to
-int transistor = 13;
-int power = 14;
-int currentLED = -1; // This LED and the ones before it are lit up (-1 is none)
+byte buttons[] = {14, 15, 19}; // Pins the buttons are wired to
+byte hourLEDS[] = {9, 8, 7, 6, 5}; // Pins the hour LEDs are wired to
+byte minuteLEDS[] = {4, 3, 2, 13, 12}; // Pins the minute LEDs are wired to
+int transistor = 18;
+int currentLED = 0; // This LED and the ones before it are lit up (0 is none)
 bool countDown;
 
 #define NUMBUTTONS sizeof(buttons)
-#define NUMLEDS sizeof(leds)
-#define MAXIMUM 7 // Max number of debouncing passes before value changes
+#define NUMHLEDS sizeof(hourLEDS)
+#define NUMMLEDS sizeof(minuteLEDS)
+#define MAXLEDS (NUMHLEDS + 1) * (NUMMLEDS + 1) - 1
+#define MAXIMUM 10 // Max number of debouncing passes before value changes
 
 byte justPressed[NUMBUTTONS], integrator[NUMBUTTONS], pressed[NUMBUTTONS];
 
 void setup() {
+  BCSCTL1 = CALBC1_16MHZ;
+  DCOCTL = CALDCO_16MHZ;
   int i;
 
   for (i = 0; i < NUMBUTTONS; i++) {
     pinMode(buttons[i], INPUT_PULLUP);
   }
 
-  for (i = 0; i < NUMLEDS; i++) {
-    pinMode(leds[i], OUTPUT);
-    digitalWrite(leds[i], LOW);
+  for (i = 0; i < NUMHLEDS; i++) {
+    pinMode(hourLEDS[i], OUTPUT);
+    digitalWrite(hourLEDS[i], LOW);
+  }
+
+  for (i = 0; i < NUMMLEDS; i++) {
+    pinMode(minuteLEDS[i], OUTPUT);
+    digitalWrite(minuteLEDS[i], LOW);
   }
 
   pinMode(transistor, OUTPUT);
   digitalWrite(transistor, LOW);
-  pinMode(power, OUTPUT);
-  digitalWrite(power, HIGH);
 }
 
 void check_switches() {
@@ -81,62 +88,90 @@ void count_presses() {
     countDown = true;
   }
 
-  if (currentLED < -1) {
-    currentLED = NUMLEDS - 1;
-  } else if (currentLED >= NUMLEDS) {
-    currentLED = -1;
+  if (currentLED < 0) {
+    currentLED = MAXLEDS;
+  } else if (currentLED > MAXLEDS) {
+    currentLED = 0;
   }
+}
+
+void turn_off_leds() {
+  int i;
+
+  for (i = 0; i < NUMHLEDS; i++) {
+    digitalWrite(hourLEDS[i], LOW);
+  }
+
+  for (i = 0; i < NUMMLEDS; i++) {
+    digitalWrite(minuteLEDS[i], LOW);
+  }
+
 }
 
 void change_leds() {
   int i;
 
-  for (i = 0; i < NUMLEDS; i++) {
-    digitalWrite(leds[i], LOW);
+  turn_off_leds();
+
+  for (i = 0; i < (currentLED / 6); i++) {
+    digitalWrite(hourLEDS[i], HIGH);
   }
 
-  for (i = 0; i <= currentLED; i++) {
-    digitalWrite(leds[i], HIGH);
+  for (i = 0; i < (currentLED % 6); i++) {
+    digitalWrite(minuteLEDS[i], HIGH);
   }
 }
 
 void flash_leds(int timer) {
-  int i;
-
-  for (i = 0; i <= currentLED; i++) {
-    digitalWrite(leds[i], HIGH);
-  }
-
+  change_leds();
   sleep(timer / 2);
 
-  for (i = 0; i < NUMLEDS; i++) {
-    digitalWrite(leds[i], LOW);
-  }
-
+  turn_off_leds();
   sleep(timer / 2);
 }
 
+bool toggle_leds(int interval) {
+  static long lastTime = millis();
+  static bool litUp = false;
+  int i;
+
+  if ((lastTime + interval / 2) > millis()) {
+    return false;
+  }
+
+  if (litUp) {
+    turn_off_leds();
+    lastTime = millis();
+    litUp = false;
+    return false;
+  } else {
+    change_leds();
+    lastTime = millis();
+    litUp = true;
+    return true;
+  }
+}
+
 void manage_countdown() {
-  while (countDown) {
-    int timer = 2;
+  static int timer = 10;
 
-    do {
-      flash_leds(1000);
-      timer--;
-    } while(timer > 0);
+  if (toggle_leds(1000)) {
+    timer--;
 
-    currentLED--;
+    if (timer == 0) {
+      currentLED--;
+      timer = 10;
+    }
 
-    if (currentLED == -1) {
+    if (currentLED == 0) {
       countDown = false;
-      break;
     }
   }
 }
 
 void shutdown() {
   int i;
-  currentLED = NUMLEDS;
+  currentLED = MAXLEDS;
 
   flash_leds(1000);
   flash_leds(500);
@@ -145,9 +180,7 @@ void shutdown() {
   flash_leds(250);
   flash_leds(250);
 
-  for (i = 0; i < NUMLEDS; i++) {
-    digitalWrite(leds[i], HIGH);
-  }
+  change_leds();
 
   digitalWrite(transistor, HIGH);
 
@@ -155,15 +188,12 @@ void shutdown() {
 }
 
 void reset() {
-  int i;
-  currentLED = -1;
+  currentLED = 0;
   digitalWrite(transistor, LOW);
 
-  for (i = 0; i < NUMLEDS; i++) {
-    digitalWrite(leds[i], LOW);
-  }
+  turn_off_leds();
 
-  for (i = 0; i < NUMBUTTONS; i++) {
+  for (int i = 0; i < NUMBUTTONS; i++) {
     justPressed[i] = 0;
     integrator[i] = 0;
     pressed[i] = 0;
@@ -173,22 +203,24 @@ void reset() {
 void loop() {
   int oldCount = currentLED;
 
-  check_switches();
-
-  count_presses();
-
-  if (oldCount != currentLED) {
-    change_leds();
-  }
-
   if (countDown) {
-    for (int i = 0; i < NUMLEDS; i++) {
-      digitalWrite(leds[i], LOW);
+    if (justPressed[2]) {
+      justPressed[2] = 0;
     }
 
     manage_countdown();
 
-    shutdown();
-    reset();
+    if (!countDown) {
+      shutdown();
+      reset();
+    }
+  } else {
+    check_switches();
+
+    count_presses();
+
+    if (oldCount != currentLED) {
+      change_leds();
+    }
   }
 }
