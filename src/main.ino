@@ -18,8 +18,9 @@ bool countDown;
 #define NUMBUTTONS sizeof(buttons)
 #define NUMHLEDS sizeof(hourLEDS)
 #define NUMMLEDS sizeof(minuteLEDS)
-#define MAXLEDS (NUMHLEDS + 1) * (NUMMLEDS + 1) - 1
+#define MAXLEDS (NUMHLEDS + 1) * (NUMMLEDS + 1) - 1 // The highest number that can be displayed using the leds
 #define MAXIMUM 10 // Max number of debouncing passes before value changes
+#define TIMER 600 // How many seconds each tick of currentLED counts down
 
 byte justPressed[NUMBUTTONS], integrator[NUMBUTTONS], pressed[NUMBUTTONS];
 
@@ -50,10 +51,6 @@ void loop() {
   int oldCount = currentLED;
 
   if (countDown) {
-    if (justPressed[2]) {
-      justPressed[2] = 0;
-    }
-
     manage_countdown();
 
     if (!countDown) {

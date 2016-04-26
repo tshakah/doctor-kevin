@@ -1,12 +1,12 @@
 void manage_countdown() {
-  static int timer = 10;
+  static int tickDelay = TIMER;
 
   if (toggle_leds(1000)) {
-    timer--;
+    tickDelay--;
 
-    if (timer == 0) {
+    if (tickDelay == 0) {
       currentLED--;
-      timer = 10;
+      tickDelay = TIMER;
     }
 
     if (currentLED == 0) {

@@ -35,7 +35,7 @@ void flash_leds(int timer) {
 
 bool toggle_leds(int interval) {
   static long lastTime = millis();
-  static bool litUp = false;
+  static bool litUp = true;
   int i;
 
   if ((lastTime + interval / 2) > millis()) {
@@ -43,15 +43,16 @@ bool toggle_leds(int interval) {
   }
 
   if (litUp) {
-    turn_off_leds();
-    lastTime = millis();
+    currentLED--;
     litUp = false;
-    return false;
   } else {
-    change_leds();
-    lastTime = millis();
+    currentLED++;
     litUp = true;
-    return true;
   }
+
+  change_leds();
+  lastTime = millis();
+
+  return !litUp; // We want to return of opposite of litUp
 }
 
