@@ -16,20 +16,19 @@ void manage_countdown() {
 }
 
 void shutdown() {
-  int i;
-  currentLED = MAXLEDS;
+  shutdown_initiate();
 
-  flash_leds(1000);
-  flash_leds(500);
-  flash_leds(500);
-  flash_leds(250);
-  flash_leds(250);
-  flash_leds(250);
+  for (int i = 0; i < 5; i++) {
+    shutdown_warning(1000 / (i + 1));
+  }
 
+  shutdown_imminent();
   change_leds();
 
   digitalWrite(transistor, HIGH);
+  sleep(50);
 
+  digitalWrite(transistor, LOW);
   sleep(2000);
 }
 

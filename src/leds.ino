@@ -25,12 +25,62 @@ void change_leds() {
   }
 }
 
-void flash_leds(int timer) {
-  change_leds();
-  sleep(timer / 2);
+void shutdown_initiate() {
+  int i;
 
   turn_off_leds();
-  sleep(timer / 2);
+  currentLED = MAXLEDS;
+  sleep(500);
+
+  for (i = 0; i < NUMHLEDS; i++) {
+    digitalWrite(hourLEDS[i], HIGH);
+    sleep(500);
+  }
+
+  for (i = 0; i < NUMMLEDS; i++) {
+    digitalWrite(minuteLEDS[i], HIGH);
+    sleep(500);
+  }
+}
+
+void shutdown_warning(int interval) {
+  static int count = 5;
+
+  for (int i = 0; i < count; i++) {
+    digitalWrite(hourLEDS[4 - i], HIGH);
+    digitalWrite(minuteLEDS[i], HIGH);
+  }
+
+  sleep(interval / 2);
+
+  if (count > 1) {
+    count--;
+  } else {
+    count = 5;
+  }
+
+  turn_off_leds();
+
+  sleep(interval / 2);
+}
+
+void shutdown_imminent() {
+  turn_off_leds();
+
+  sleep(125);
+
+  for (int j = 0; j < 4; j++) {
+    for (int i = 0; i <= j; i++) {
+      digitalWrite(hourLEDS[4 - i], HIGH);
+      digitalWrite(minuteLEDS[i], HIGH);
+    }
+
+    sleep(125 * (j + 1));
+  }
+
+  turn_off_leds();
+
+  sleep(250);
 }
 
 bool toggle_leds(int interval) {
@@ -53,6 +103,5 @@ bool toggle_leds(int interval) {
   change_leds();
   lastTime = millis();
 
-  return !litUp; // We want to return of opposite of litUp
+  return litUp;
 }
-
