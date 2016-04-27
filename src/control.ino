@@ -26,7 +26,7 @@ void shutdown() {
   change_leds();
 
   digitalWrite(transistor, HIGH);
-  sleep(50);
+  sleep(2000);
 
   digitalWrite(transistor, LOW);
   sleep(2000);
